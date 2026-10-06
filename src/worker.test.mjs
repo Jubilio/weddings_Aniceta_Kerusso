@@ -3,13 +3,16 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import worker from './worker.js';
 const sqlite=new DatabaseSync(':memory:');
+// Start from the previous production schema, including an existing personal link.
+sqlite.exec("CREATE TABLE guests(id TEXT PRIMARY KEY,name TEXT NOT NULL,phone TEXT NOT NULL DEFAULT '',token TEXT NOT NULL UNIQUE,rsvp TEXT NOT NULL DEFAULT 'pending',active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);INSERT INTO guests(id,name,token,rsvp) VALUES('legacy','Convidado existente','existing-link','yes');");
 const db={exec:async sql=>{for(const statement of sql.split("\n").filter(s=>s.trim()))sqlite.exec(statement)},prepare(sql){const s=sqlite.prepare(sql);return {bind(...args){return {first:async()=>s.get(...args)||null,all:async()=>({results:s.all(...args)}),run:async()=>({meta:{changes:s.run(...args).changes}})}},run:async()=>({meta:{changes:s.run().changes}}),all:async()=>({results:s.all()})}},async batch(items){sqlite.exec('BEGIN');try{const r=[];for(const x of items)r.push(await x.run());sqlite.exec('COMMIT');return r}catch(e){sqlite.exec('ROLLBACK');throw e}}};
+let adminCookie;
 const env={DB:db,ADMIN_PASSWORD:'1234',ASSETS:{fetch:()=>new Response('asset')}};
 async function request(path,{method='GET',body,token,cookie,origin}={}){const headers={};if(body!==undefined)headers['Content-Type']='application/json';if(token)headers['X-Invite-Token']=token;if(cookie)headers.Cookie=cookie;if(origin)headers.Origin=origin;const r=await worker.fetch(new Request('https://wedding.test'+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)}),env);return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')}}
 test('Personal invitations, authentication, RSVP and atomic gift reservations',async()=>{
  assert.equal((await request('/api/admin/guests')).status,401);
  assert.equal((await request('/api/admin/login',{method:'POST',body:{password:'wrong'}})).status,401);
- const login=await request('/api/admin/login',{method:'POST',body:{password:env.ADMIN_PASSWORD}});assert.equal(login.status,200);assert.match(login.cookie,/HttpOnly; Secure; SameSite=Strict/);const cookie=login.cookie.split(';')[0];
+ const login=await request('/api/admin/login',{method:'POST',body:{password:env.ADMIN_PASSWORD}});assert.equal(login.status,200);assert.match(login.cookie,/HttpOnly; Secure; SameSite=Strict/);const cookie=login.cookie.split(';')[0];adminCookie=cookie;
  const create=name=>request('/api/admin/guests',{method:'POST',cookie,body:{name,phone:''}});
  const a=await create('Convidado A'),b=await create('Convidado B');assert.equal(a.status,201);
  assert.equal((await request('/api/invite',{token:a.data.token})).data.guest.name,'Convidado A');
@@ -29,7 +32,26 @@ test('Personal invitations, authentication, RSVP and atomic gift reservations',a
  assert.equal((await action(b.data.token,'reserve','mock-1')).status,409);
  assert.equal((await request('/api/admin/gifts/mock-1',{method:'PATCH',cookie,body:{reset:true}})).status,200);
  assert.equal((await action(b.data.token,'reserve','mock-1')).status,200);
- assert.equal((await request('/api/admin/guests',{cookie})).data.guests.length,2);
+ assert.equal((await request('/api/admin/guests',{cookie})).data.guests.length,3);const existing=(await request('/api/invite',{token:'existing-link'})).data.guest;assert.equal(existing.name,'Convidado existente');assert.equal(existing.rsvp,'yes');assert.equal(existing.companion,'');
+});
+
+test('One or two named guests share a link with independent attendance',async()=>{
+ const cookie=adminCookie;
+ assert.equal((await request('/api/admin/guests',{method:'POST',cookie,body:{name:'',companion:'Ana'}})).status,400);
+ const single=await request('/api/admin/guests',{method:'POST',cookie,body:{name:'Paulo'}});
+ assert.equal((await request('/api/invite',{token:single.data.token})).data.guest.companion,'');
+ const pair=await request('/api/admin/guests',{method:'POST',cookie,body:{name:'Maria',companion:'João'}});
+ assert.equal(pair.status,201);
+ let g=(await request('/api/invite',{token:pair.data.token})).data.guest;
+ assert.equal(g.name,'Maria');assert.equal(g.companion,'João');assert.equal(g.companion_rsvp,'pending');
+ assert.equal((await request('/api/rsvp',{method:'POST',token:pair.data.token,body:{rsvp:'yes',companion_rsvp:'no'}})).status,200);
+ g=(await request('/api/invite',{token:pair.data.token})).data.guest;
+ assert.equal(g.rsvp,'yes');assert.equal(g.companion_rsvp,'no');
+ assert.equal((await request('/api/rsvp',{method:'POST',token:pair.data.token,body:{rsvp:'yes',companion_rsvp:'invalid'}})).status,400);
+ await request('/api/admin/guests/'+pair.data.id,{method:'PATCH',cookie,body:{companion:''}});
+ g=(await request('/api/invite',{token:pair.data.token})).data.guest;assert.equal(g.companion,'');assert.equal(g.companion_rsvp,'pending');
+ await request('/api/admin/guests/'+pair.data.id,{method:'PATCH',cookie,body:{companion:'Carla'}});
+ g=(await request('/api/invite',{token:pair.data.token})).data.guest;assert.equal(g.companion,'Carla');assert.equal(g.companion_rsvp,'pending');
 });
 
 test('Four-digit PIN login is limited to five attempts per IP window',async()=>{
