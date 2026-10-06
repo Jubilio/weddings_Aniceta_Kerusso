@@ -1,6 +1,10 @@
 import {schema} from './schema.js';
 let initialized;
-const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+async function initialize(db){
+ if(!initialized)initialized=(async()=>{for(const sql of schema.split('\n').map(s=>s.trim()).filter(Boolean))await db.prepare(sql).run()})().catch(e=>{initialized=null;console.error('Wedding database initialization failed',e.message);fail('Não foi possível preparar a base de dados do convite. Contacte o administrador.',503)});
+ await initialized;
+}
+const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','X-Wedding-Version':'2026-10-06-db-batch'}});
 const fail=(message,status=400)=>{throw Object.assign(new Error(message),{status})};
 const clean=(v,max=200)=>String(v??'').trim().slice(0,max);
 async function digest(s){return new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))}
@@ -27,7 +31,7 @@ export default {async fetch(req,env){const url=new URL(req.url),path=url.pathnam
  if(path==='/api/admin/login'&&req.method==='POST'){
   if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<4)fail('O acesso administrativo ainda não está disponível.',503);
   if(!env.DB)fail('Ligue a base de dados DB antes de iniciar sessão.',503);
-  if(!initialized)initialized=env.DB.exec(schema).catch(e=>{initialized=null;throw e});await initialized;
+  await initialize(env.DB);
   const ip=req.headers.get('CF-Connecting-IP')||'unknown';
   const key=[...await digest(ip)].map(x=>x.toString(16).padStart(2,'0')).join('')+':'+Math.floor(Date.now()/900000);
   const limit=await env.DB.prepare('INSERT INTO login_limits(key,attempts) VALUES(?,1) ON CONFLICT(key) DO UPDATE SET attempts=attempts+1 RETURNING attempts').bind(key).first();
@@ -38,7 +42,7 @@ export default {async fetch(req,env){const url=new URL(req.url),path=url.pathnam
  if(path==='/api/admin/logout'&&req.method==='POST'){const res=json({ok:true});res.headers.set('Set-Cookie','wedding_admin=; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age=0');return res}
  if(path.startsWith('/api/admin/'))await admin(req,env);
  if(!env.DB)fail('A base de dados ainda não foi ligada ao convite.',503);
- if(!initialized)initialized=env.DB.exec(schema).catch(e=>{initialized=null;throw e});await initialized;
+ await initialize(env.DB);
  if(path==='/api/invite'&&req.method==='GET'){const g=await guest(req,env);return json({guest:{name:g.name,rsvp:g.rsvp}})}
  if(path==='/api/rsvp'&&req.method==='POST'){const g=await guest(req,env),b=await body(req);if(!['yes','no'].includes(b.rsvp))fail('Seleccione uma resposta válida.');await env.DB.prepare('UPDATE guests SET rsvp=? WHERE id=? AND active=1').bind(b.rsvp,g.id).run();return json({ok:true,rsvp:b.rsvp})}
  if(path==='/api/gifts'&&req.method==='GET'){let g=null;if(req.headers.has('X-Invite-Token'))g=await guest(req,env);const {results}=await env.DB.prepare('SELECT id,name,description,status,guest_id FROM gifts ORDER BY name').all();return json({gifts:results.map(({guest_id,...gift})=>({...gift,mine:!!g&&guest_id===g.id}))})}
