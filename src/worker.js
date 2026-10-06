@@ -6,7 +6,7 @@ const clean=(v,max=200)=>String(v??'').trim().slice(0,max);
 async function digest(s){return new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)))}
 async function equal(a,b){const x=await digest(a),y=await digest(b);let d=0;for(let i=0;i<x.length;i++)d|=x[i]^y[i];return d===0}
 async function sign(value,key){const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(key),{name:'HMAC',hash:'SHA-256'},false,['sign']);return [...new Uint8Array(await crypto.subtle.sign('HMAC',k,new TextEncoder().encode(value)))].map(x=>x.toString(16).padStart(2,'0')).join('')}
-async function admin(req,env){if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<16)fail('Defina ADMIN_PASSWORD nos segredos do Cloudflare (mínimo 16 caracteres).',503);const cookie=req.headers.get('Cookie')?.match(/(?:^|;\s*)wedding_admin=([^;]+)/)?.[1]||'';const [expires,sig]=cookie.split('.');if(!expires||Number(expires)<Date.now()||!sig||!await equal(sig,await sign(expires,env.ADMIN_PASSWORD)))fail('Inicie sessão no painel administrativo.',401)}
+async function admin(req,env){if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<4)fail('Defina ADMIN_PASSWORD nos segredos do Cloudflare (mínimo 4 caracteres).',503);const cookie=req.headers.get('Cookie')?.match(/(?:^|;\s*)wedding_admin=([^;]+)/)?.[1]||'';const [expires,sig]=cookie.split('.');if(!expires||Number(expires)<Date.now()||!sig||!await equal(sig,await sign(expires,env.ADMIN_PASSWORD)))fail('Inicie sessão no painel administrativo.',401)}
 async function body(req){if(Number(req.headers.get('content-length'))>10000)fail('Pedido demasiado grande.',413);const text=await req.text();if(text.length>10000)fail('Pedido demasiado grande.',413);try{return JSON.parse(text)}catch{fail('Pedido inválido.')}}
 async function guest(req,env){const token=req.headers.get('X-Invite-Token');if(!token)fail('Abra o link pessoal do seu convite.',401);const g=await env.DB.prepare('SELECT id,name,rsvp FROM guests WHERE token=? AND active=1').bind(token).first();if(!g)fail('Convite inválido ou desactivado.',403);return g}
 export default {async fetch(req,env){const url=new URL(req.url),path=url.pathname;
@@ -15,7 +15,13 @@ export default {async fetch(req,env){const url=new URL(req.url),path=url.pathnam
  if(!['GET','POST','PATCH'].includes(req.method))fail('Método não permitido.',405);
  if(req.method!=='GET'){const origin=req.headers.get('Origin');if(origin&&origin!==url.origin)fail('Origem não permitida.',403);if(!req.headers.get('Content-Type')?.startsWith('application/json'))fail('Use JSON.',415)}
  if(path==='/api/admin/login'&&req.method==='POST'){
-  if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<16)fail('Defina o segredo ADMIN_PASSWORD com pelo menos 16 caracteres no Cloudflare.',503);
+  if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<4)fail('Defina o segredo ADMIN_PASSWORD com pelo menos 4 caracteres no Cloudflare.',503);
+  if(!env.DB)fail('Ligue a base de dados DB antes de iniciar sessão.',503);
+  if(!initialized)initialized=env.DB.exec(schema).catch(e=>{initialized=null;throw e});await initialized;
+  const ip=req.headers.get('CF-Connecting-IP')||'unknown';
+  const key=[...await digest(ip)].map(x=>x.toString(16).padStart(2,'0')).join('')+':'+Math.floor(Date.now()/900000);
+  const limit=await env.DB.prepare('INSERT INTO login_limits(key,attempts) VALUES(?,1) ON CONFLICT(key) DO UPDATE SET attempts=attempts+1 RETURNING attempts').bind(key).first();
+  if(limit.attempts>5)fail('Demasiadas tentativas. Aguarde até 15 minutos antes de tentar novamente.',429);
   const b=await body(req);if(!await equal(clean(b.password,1000),env.ADMIN_PASSWORD))fail('Palavra-passe incorrecta.',401);
   const expires=String(Date.now()+8*3600000);const res=json({ok:true});res.headers.set('Set-Cookie',`wedding_admin=${expires}.${await sign(expires,env.ADMIN_PASSWORD)}; HttpOnly; Secure; SameSite=Strict; Path=/api/admin; Max-Age=28800`);return res;
  }
