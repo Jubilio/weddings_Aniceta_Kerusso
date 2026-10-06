@@ -12,7 +12,7 @@ As tabelas e os seis presentes de exemplo são criados automaticamente na primei
 
 ## Palavra-passe do painel admin
 
-No Worker, abra Settings → Variables and Secrets e adicione um **Secret** chamado `ADMIN_PASSWORD`, com uma palavra-passe forte e única de pelo menos 16 caracteres. Guarde/aplique a alteração e publique se o painel pedir. Não coloque a palavra-passe no GitHub ou no chat. Sem este segredo, o painel recusa o acesso.
+No Worker, abra Settings → Variables and Secrets e adicione um **Secret** chamado `ADMIN_PASSWORD`, com um código de pelo menos 4 caracteres (pode usar os 4 dígitos pretendidos). Guarde/aplique a alteração e publique se o painel pedir. Não coloque a palavra-passe no GitHub ou no chat. Sem este segredo, o painel recusa o acesso. O login aceita no máximo 5 tentativas por endereço IP em cada janela de 15 minutos. Um código de 4 dígitos é mais fácil de adivinhar; mantenha-o reservado aos noivos.
 
 ## Utilização
 
