@@ -4,7 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import worker from './worker.js';
 const sqlite=new DatabaseSync(':memory:');
 const db={exec:async sql=>sqlite.exec(sql),prepare(sql){const s=sqlite.prepare(sql);return {bind(...args){return {first:async()=>s.get(...args)||null,all:async()=>({results:s.all(...args)}),run:async()=>({meta:{changes:s.run(...args).changes}})}},all:async()=>({results:s.all()})}},async batch(items){sqlite.exec('BEGIN');try{const r=[];for(const x of items)r.push(await x.run());sqlite.exec('COMMIT');return r}catch(e){sqlite.exec('ROLLBACK');throw e}}};
-const env={DB:db,ADMIN_PASSWORD:'a-test-password-long-enough',ASSETS:{fetch:()=>new Response('asset')}};
+const env={DB:db,ADMIN_PASSWORD:'1234',ASSETS:{fetch:()=>new Response('asset')}};
 async function request(path,{method='GET',body,token,cookie,origin}={}){const headers={};if(body!==undefined)headers['Content-Type']='application/json';if(token)headers['X-Invite-Token']=token;if(cookie)headers.Cookie=cookie;if(origin)headers.Origin=origin;const r=await worker.fetch(new Request('https://wedding.test'+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)}),env);return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')}}
 test('Personal invitations, authentication, RSVP and atomic gift reservations',async()=>{
  assert.equal((await request('/api/admin/guests')).status,401);
@@ -30,4 +30,9 @@ test('Personal invitations, authentication, RSVP and atomic gift reservations',a
  assert.equal((await request('/api/admin/gifts/mock-1',{method:'PATCH',cookie,body:{reset:true}})).status,200);
  assert.equal((await action(b.data.token,'reserve','mock-1')).status,200);
  assert.equal((await request('/api/admin/guests',{cookie})).data.guests.length,2);
+});
+
+test('Four-digit PIN login is limited to five attempts per IP window',async()=>{
+ for(let i=0;i<3;i++)assert.equal((await request('/api/admin/login',{method:'POST',body:{password:'0000'}})).status,401);
+ assert.equal((await request('/api/admin/login',{method:'POST',body:{password:'1234'}})).status,429);
 });
