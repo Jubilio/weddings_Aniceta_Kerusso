@@ -1,31 +1,30 @@
-# Publicação no Cloudflare
+# Publicação e configuração
 
-## Cloudflare Workers ligado ao GitHub
+Este projecto usa Cloudflare Workers com Static Assets e D1. Use Workers, não Pages estático, para permitir gestão de convidados e reservas partilhadas.
 
-1. No painel Cloudflare, abra Workers & Pages e crie uma aplicação a partir de um repositório GitHub.
-2. Seleccione `Jubilio/weddings_Aniceta_Kerusso` e a branch `main`.
-3. Nome do Worker: `weddings-aniceta-kerusso`.
-4. Deixe o comando de build vazio: o HTML já está em `dist`.
-5. Comando de deploy: `npx wrangler deploy`.
-6. Publique e aguarde a confirmação de sucesso no painel.
+## Workers ligado ao GitHub
 
-A configuração `wrangler.jsonc` serve os ficheiros de `dist` através de Workers Static Assets. O endereço final deve ser copiado do painel após a publicação.
+Repositório: `Jubilio/weddings_Aniceta_Kerusso`. Branch: `main`. Nome: `weddings-aniceta-kerusso`. Comando de build: vazio. Comando de deploy: `npx wrangler deploy`. Directório raiz: `/`.
 
-## Pelo terminal
+O `wrangler.jsonc` declara a base D1 `weddings-aniceta-kerusso-db` com o binding `DB`. As versões actuais do Wrangler podem provisionar automaticamente a base ao publicar. Se o painel solicitar configuração manual, crie essa base em Storage & Databases → D1 e associe-a ao Worker com o nome `DB`. Para manter a associação em futuras publicações Git, adicione o UUID real da base como `database_id` na entrada `d1_databases` de `wrangler.jsonc`. Nunca use um ID fictício.
 
-```bash
-git clone https://github.com/Jubilio/weddings_Aniceta_Kerusso.git
-cd weddings_Aniceta_Kerusso
-npx wrangler login
-npx wrangler deploy
-```
+As tabelas e os seis presentes de exemplo são criados automaticamente na primeira chamada da API. O processo usa `CREATE TABLE IF NOT EXISTS` e `INSERT OR IGNORE`, preservando os dados existentes.
 
-A autenticação é realizada directamente pelo Cloudflare. Não guarde tokens no código.
+## Palavra-passe do painel admin
 
-## Alternativa: Cloudflare Pages
+No Worker, abra Settings → Variables and Secrets e adicione um **Secret** chamado `ADMIN_PASSWORD`, com uma palavra-passe forte e única de pelo menos 16 caracteres. Guarde/aplique a alteração e publique se o painel pedir. Não coloque a palavra-passe no GitHub ou no chat. Sem este segredo, o painel recusa o acesso.
 
-Seleccione o mesmo repositório, a branch `main`, sem framework e sem comando de build. Defina `dist` como directório de publicação.
+## Utilização
 
-## Estado
+- `/admin/`: adicionar/editar convidados, activar/desactivar convites, ajustar presença, copiar links, abrir WhatsApp, exportar CSV e gerir presentes.
+- Cada convidado recebe um link `/?convite=TOKEN`. Esse link permite responder e reservar em nome desse convidado, pelo que deve ser partilhado apenas com ele.
+- A confirmação de presença é guardada na base. O botão de WhatsApp abre uma mensagem para a noiva no número `+258848675125`; o convidado precisa de enviar a mensagem no WhatsApp.
+- `/presentes/?convite=TOKEN`: reservar, libertar uma reserva ainda não comprada e confirmar compra. Sem token é possível apenas consultar.
+- Os presentes iniciais são exemplos. Edite-os no admin antes de enviar os convites. Uma reserva não realiza pagamentos ou encomendas.
+- O estado dos presentes é actualizado a cada 15 segundos; conflitos de reserva são verificados atomicamente no servidor. A lista pública não mostra nomes de quem reservou.
+- Desactivar um convidado invalida o link e liberta reservas ainda não compradas. Os presentes marcados como comprados permanecem indisponíveis até um administrador os libertar.
+- A música é servida em `/music/TEEKS_-_First_Time.mp3`, copiada para `dist/music` no repositório. O som automático depende do navegador; o botão “Ouvir música” permite iniciar/pausar.
 
-O repositório está preparado para publicação. A publicação na conta Cloudflare ainda precisa de ser concluída; adicionar estes ficheiros não publica o site por si só.
+## Verificação após publicação
+
+Abra `/admin/`, crie dois convidados e teste os links em navegadores separados. Confirme a presença de um deles. Reserve um presente: o outro não deve conseguir reservá-lo. Confirme a compra e verifique o estado no admin. Verifique também a música e o link WhatsApp.

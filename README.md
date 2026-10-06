@@ -1,40 +1,41 @@
-# Convite de casamento — Aniceta & Kerusso
+# Aniceta & Kerusso — Convite de casamento
 
-Convite digital para Aniceta Martins e Kerusso Truth Perhay, com um desenho próprio em chocolate, café, caramelo, bege e marfim.
+Casamento de Aniceta Martins e Kerusso Truth Perhay, em **20 de Fevereiro de 2027**.
 
-## Conteúdo
+Convite com moldura floral, paleta de chocolate e marfim, ícones, música, convidados personalizados, confirmação de presença e gestão de presentes.
 
-- Data: **20 de Fevereiro de 2027**.
+## Funcionalidades
 
-- Cerimónia: Igreja Arco-Íris de Zimpeto, às 10h00.
-- Recepção: Cajada 1, às 13h00.
-- Paleta e orientações de vestuário.
-- Avisos sobre convite pessoal, acompanhantes e crianças.
-- Links de pesquisa de localização no Google Maps.
+- Música TEEKS – First Time: tentativa de reprodução automática com botão de iniciar/pausar quando bloqueada pelo navegador.
+- Links pessoais para cada convidado e confirmação de presença guardada em D1.
+- WhatsApp da noiva: +258848675125. O site abre uma mensagem; o envio é feito pelo convidado.
+- `/admin/`: convidados, edição, activação/desactivação, estados de presença, links, exportação CSV e gestão dos presentes.
+- `/presentes/`: lista inicial de exemplos, reserva exclusiva por presente, libertação de reservas e confirmação de compra.
+- Reservas partilhadas entre dispositivos, com actualização periódica e verificação atómica no servidor.
 
-## Executar localmente
+## Tecnologia e publicação
 
-O projecto usa HTML e CSS, sem instalação de dependências ou compilação.
+HTML, CSS e JavaScript, Cloudflare Worker e Cloudflare D1. Não necessita de build. A pasta `dist` contém os assets, `src/worker.js` contém a API e `src/schema.js` inicializa as tabelas e os exemplos.
+
+Consulte [CLOUDFLARE.md](CLOUDFLARE.md) para configurar D1, o segredo `ADMIN_PASSWORD` e publicar. Uma publicação apenas estática não suporta RSVP ou reservas.
 
 ```bash
-python -m http.server 8000 --directory dist
+npx wrangler dev
 ```
 
-Abra http://localhost:8000 no navegador. Também pode abrir `dist/index.html` directamente.
+Para testes de API e regras de reserva, com Node.js 22.13 ou superior:
 
-## Editar
+```bash
+node --test src/worker.test.mjs
+```
 
-O conteúdo e os estilos estão em `dist/index.html`. As fontes Cormorant Garamond e DM Sans são carregadas através do Google Fonts; existem fontes de substituição locais.
+## Dados do evento
 
-## Publicação
+- Cerimónia: Igreja Arco-Íris de Zimpeto, 10h00.
+- Recepção: Cajada 1, 13h00.
+- Data: 20/02/2027.
+- Os links de mapa são pesquisas. Confirme a localização exacta.
+- Ajuste a lista de presentes de exemplo no admin antes de partilhar convites.
+- Os links pessoais dão acesso à resposta e reservas do convidado; partilhe-os apenas com o destinatário.
 
-Para alojamento estático, use `dist` como directório de publicação, sem comando de build. Esta organização permite usar Cloudflare Pages ou outro serviço de alojamento estático. Nenhuma integração de publicação automática foi configurada neste repositório.
-
-## Informações pendentes
-
-- Lista de presentes.
-- Confirmar a localização exacta dos espaços: os links actuais são pesquisas, não coordenadas verificadas.
-
-## Estado da versão
-
-Esta versão é um convite estático. Não inclui confirmação de presença, base de dados de convidados, painel administrativo ou check-in por QR Code.
+O painel usa uma sessão protegida por cookie HttpOnly, Secure e SameSite. O segredo administrativo nunca é enviado ao frontend nem guardado no repositório.
