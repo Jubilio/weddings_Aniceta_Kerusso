@@ -4,6 +4,8 @@ Convite digital para Aniceta Martins e Kerusso Truth Perhay, com um desenho pró
 
 ## Conteúdo
 
+- Data: **20 de Fevereiro de 2027**.
+
 - Cerimónia: Igreja Arco-Íris de Zimpeto, às 10h00.
 - Recepção: Cajada 1, às 13h00.
 - Paleta e orientações de vestuário.
@@ -30,7 +32,6 @@ Para alojamento estático, use `dist` como directório de publicação, sem coma
 
 ## Informações pendentes
 
-- Data do casamento.
 - Lista de presentes.
 - Confirmar a localização exacta dos espaços: os links actuais são pesquisas, não coordenadas verificadas.
 
