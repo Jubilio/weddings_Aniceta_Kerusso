@@ -15,7 +15,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "weddings-aniceta-kerusso-db"
+      "database_name": "weddings-aniceta-kerusso-db",
+      "database_id": "079b072d-9648-49d9-9730-f12af6f3cc1a"
     }
   ]
 }
