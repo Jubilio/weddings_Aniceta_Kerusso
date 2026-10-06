@@ -10,7 +10,17 @@ async function admin(req,env){if(!env.ADMIN_PASSWORD||env.ADMIN_PASSWORD.length<
 async function body(req){if(Number(req.headers.get('content-length'))>10000)fail('Pedido demasiado grande.',413);const text=await req.text();if(text.length>10000)fail('Pedido demasiado grande.',413);try{return JSON.parse(text)}catch{fail('Pedido inválido.')}}
 async function guest(req,env){const token=req.headers.get('X-Invite-Token');if(!token)fail('Abra o link pessoal do seu convite.',401);const g=await env.DB.prepare('SELECT id,name,rsvp FROM guests WHERE token=? AND active=1').bind(token).first();if(!g)fail('Convite inválido ou desactivado.',403);return g}
 export default {async fetch(req,env){const url=new URL(req.url),path=url.pathname;
- if(!path.startsWith('/api/'))return env.ASSETS.fetch(req);
+ if(!path.startsWith('/api/')){
+  const response=await env.ASSETS.fetch(req);
+  if((path==='/'||path==='/index.html')&&response.headers.get('Content-Type')?.includes('text/html')){
+   const origin=url.origin;
+   return new HTMLRewriter()
+    .on('meta[property="og:image"],meta[property="og:image:secure_url"],meta[name="twitter:image"]',{element(e){e.setAttribute('content',origin+'/assets/og-wedding.jpg')}})
+    .on('meta[property="og:url"]',{element(e){e.setAttribute('content',origin+'/')}})
+    .transform(response);
+  }
+  return response;
+ }
  try{
  if(!['GET','POST','PATCH'].includes(req.method))fail('Método não permitido.',405);
  if(req.method!=='GET'){const origin=req.headers.get('Origin');if(origin&&origin!==url.origin)fail('Origem não permitida.',403);if(!req.headers.get('Content-Type')?.startsWith('application/json'))fail('Use JSON.',415)}
