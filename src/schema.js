@@ -1,4 +1,5 @@
 export const schema = `
+CREATE TABLE IF NOT EXISTS login_limits(key TEXT PRIMARY KEY,attempts INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS guests(id TEXT PRIMARY KEY,name TEXT NOT NULL,phone TEXT NOT NULL DEFAULT '',token TEXT NOT NULL UNIQUE,rsvp TEXT NOT NULL DEFAULT 'pending' CHECK(rsvp IN ('pending','yes','no')),active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS gifts(id TEXT PRIMARY KEY,name TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'available' CHECK(status IN ('available','reserved','purchased')),guest_id TEXT REFERENCES guests(id),updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 INSERT OR IGNORE INTO gifts(id,name,description) VALUES
