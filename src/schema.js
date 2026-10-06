@@ -2,10 +2,4 @@ export const schema = `
 CREATE TABLE IF NOT EXISTS login_limits(key TEXT PRIMARY KEY,attempts INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS guests(id TEXT PRIMARY KEY,name TEXT NOT NULL,phone TEXT NOT NULL DEFAULT '',token TEXT NOT NULL UNIQUE,rsvp TEXT NOT NULL DEFAULT 'pending' CHECK(rsvp IN ('pending','yes','no')),active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS gifts(id TEXT PRIMARY KEY,name TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'available' CHECK(status IN ('available','reserved','purchased')),guest_id TEXT REFERENCES guests(id),updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-INSERT OR IGNORE INTO gifts(id,name,description) VALUES
-('mock-1','Conjunto de panelas','Exemplo: conjunto de panelas para o novo lar.'),
-('mock-2','Jogo de jantar','Exemplo: pratos e peças para partilhar refeições.'),
-('mock-3','Jogo de copos','Exemplo: conjunto de copos para uso diário.'),
-('mock-4','Roupa de cama','Exemplo: conjunto de lençóis para o casal.'),
-('mock-5','Conjunto de toalhas','Exemplo: toalhas de banho e de rosto.'),
-('mock-6','Liquidificador','Exemplo: um electrodoméstico para a cozinha.');`;
+INSERT OR IGNORE INTO gifts(id,name,description) VALUES ('mock-1','Conjunto de panelas','Exemplo: conjunto de panelas para o novo lar.'), ('mock-2','Jogo de jantar','Exemplo: pratos e peças para partilhar refeições.'), ('mock-3','Jogo de copos','Exemplo: conjunto de copos para uso diário.'), ('mock-4','Roupa de cama','Exemplo: conjunto de lençóis para o casal.'), ('mock-5','Conjunto de toalhas','Exemplo: toalhas de banho e de rosto.'), ('mock-6','Liquidificador','Exemplo: um electrodoméstico para a cozinha.');`; 
