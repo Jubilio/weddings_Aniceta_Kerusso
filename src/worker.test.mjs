@@ -4,13 +4,13 @@ import {DatabaseSync} from 'node:sqlite';
 import worker from './worker.js';
 const sqlite=new DatabaseSync(':memory:');
 // Start from the previous production schema, including an existing personal link.
-sqlite.exec("CREATE TABLE guests(id TEXT PRIMARY KEY,name TEXT NOT NULL,phone TEXT NOT NULL DEFAULT '',token TEXT NOT NULL UNIQUE,rsvp TEXT NOT NULL DEFAULT 'pending',active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);INSERT INTO guests(id,name,token,rsvp) VALUES('legacy','Convidado existente','existing-link','yes');");
+sqlite.exec("CREATE TABLE guests(id TEXT PRIMARY KEY,name TEXT NOT NULL,phone TEXT NOT NULL DEFAULT '',token TEXT NOT NULL UNIQUE,rsvp TEXT NOT NULL DEFAULT 'pending',active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);INSERT INTO guests(id,name,token,rsvp) VALUES('legacy','Mãe Laurinda','existing-link','yes');");
 const db={exec:async sql=>{for(const statement of sql.split("\n").filter(s=>s.trim()))sqlite.exec(statement)},prepare(sql){const s=sqlite.prepare(sql);return {bind(...args){return {first:async()=>s.get(...args)||null,all:async()=>({results:s.all(...args)}),run:async()=>({meta:{changes:s.run(...args).changes}})}},run:async()=>({meta:{changes:s.run().changes}}),all:async()=>({results:s.all()})}},async batch(items){sqlite.exec('BEGIN');try{const r=[];for(const x of items)r.push(await x.run());sqlite.exec('COMMIT');return r}catch(e){sqlite.exec('ROLLBACK');throw e}}};
 let adminCookie;
 const env={DB:db,ADMIN_PASSWORD:'1234',ASSETS:{fetch:()=>new Response('asset')}};
 async function request(path,{method='GET',body,token,cookie,origin}={}){const headers={};if(body!==undefined)headers['Content-Type']='application/json';if(token)headers['X-Invite-Token']=token;if(cookie)headers.Cookie=cookie;if(origin)headers.Origin=origin;const r=await worker.fetch(new Request('https://wedding.test'+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)}),env);return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')}}
 test('Personal invitations, authentication, RSVP and atomic gift reservations',async()=>{
- assert.equal((await request('/api/admin/guests')).status,401);
+ assert.equal((await request('/api/admin/guests')).status,401);assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM guests').get().n,1);await request('/api/gifts');assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM guests').get().n,1);
  assert.equal((await request('/api/admin/login',{method:'POST',body:{password:'wrong'}})).status,401);
  const login=await request('/api/admin/login',{method:'POST',body:{password:env.ADMIN_PASSWORD}});assert.equal(login.status,200);assert.match(login.cookie,/HttpOnly; Secure; SameSite=Strict/);const cookie=login.cookie.split(';')[0];adminCookie=cookie;
  const create=name=>request('/api/admin/guests',{method:'POST',cookie,body:{name,phone:''}});
@@ -32,7 +32,7 @@ test('Personal invitations, authentication, RSVP and atomic gift reservations',a
  assert.equal((await action(b.data.token,'reserve','mock-1')).status,409);
  assert.equal((await request('/api/admin/gifts/mock-1',{method:'PATCH',cookie,body:{reset:true}})).status,200);
  assert.equal((await action(b.data.token,'reserve','mock-1')).status,200);
- assert.equal((await request('/api/admin/guests',{cookie})).data.guests.length,3);const existing=(await request('/api/invite',{token:'existing-link'})).data.guest;assert.equal(existing.name,'Convidado existente');assert.equal(existing.rsvp,'yes');assert.equal(existing.companion,'');
+ assert.equal((await request('/api/admin/guests',{cookie})).data.guests.length,126);const existing=(await request('/api/invite',{token:'existing-link'})).data.guest;assert.equal(existing.name,'Mãe Laurinda');assert.equal(existing.rsvp,'yes');assert.equal(existing.companion,'');
 });
 
 test('One or two named guests share a link with independent attendance',async()=>{
@@ -52,6 +52,19 @@ test('One or two named guests share a link with independent attendance',async()=
  g=(await request('/api/invite',{token:pair.data.token})).data.guest;assert.equal(g.companion,'');assert.equal(g.companion_rsvp,'pending');
  await request('/api/admin/guests/'+pair.data.id,{method:'PATCH',cookie,body:{companion:'Carla'}});
  g=(await request('/api/invite',{token:pair.data.token})).data.guest;assert.equal(g.companion,'Carla');assert.equal(g.companion_rsvp,'pending');
+});
+
+test('Initial list is grouped, imported once and does not share unnamed places',async()=>{
+ const cookie=adminCookie;const first=await request('/api/admin/guests',{cookie});const imported=first.data.guests.filter(g=>g.import_key);
+ assert.equal(imported.length,124);assert.equal(imported.reduce((s,g)=>s+1+(g.companion?1:0),0),135);
+ assert.equal(imported.filter(g=>g.is_placeholder).length,15);
+ const groups=await request('/api/admin/groups',{cookie});assert.equal(groups.data.groups.length,12);assert.equal(groups.data.groups.reduce((s,g)=>s+g.expected_people,0),135);
+ const legacy=first.data.guests.find(g=>g.id==='legacy');assert.equal(legacy.group_name,'Família Munguambe');assert.equal(legacy.token,'existing-link');assert.equal(legacy.rsvp,'yes');
+ assert.equal(imported.filter(g=>g.name==='Mano Augusto').length,2);
+ const place=imported.find(g=>g.is_placeholder);assert.equal((await request('/api/invite',{token:place.token})).status,403);
+ await request('/api/admin/guests/'+place.id,{method:'PATCH',cookie,body:{name:'Nome do músico'}});
+ assert.equal((await request('/api/invite',{token:place.token})).data.guest.name,'Nome do músico');
+ const second=await request('/api/admin/guests',{cookie});assert.equal(second.data.guests.length,first.data.guests.length);assert.equal(second.data.guests.find(g=>g.id===place.id).name,'Nome do músico');
 });
 
 test('Four-digit PIN login is limited to five attempts per IP window',async()=>{
