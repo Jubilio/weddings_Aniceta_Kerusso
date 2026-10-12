@@ -82,6 +82,18 @@ test('On-site attendance is per person, authenticated and independent of RSVP',a
  const unnamed=(await request('/api/admin/guests',{cookie})).data.guests.find(g=>g.is_placeholder);assert.equal((await request('/api/admin/guests/'+unnamed.id+'/checkin',{method:'POST',cookie,body:{person:'primary',present:true}})).status,403);
 });
 
+test('Guest messages require a valid invite and keep public responses private',async()=>{
+ const cookie=adminCookie;const pair=await request('/api/admin/guests',{method:'POST',cookie,body:{name:'Autor da mensagem',companion:'Esposa'}});const token=pair.data.token;
+ assert.equal((await request('/api/messages',{method:'POST',body:{person:'primary',message:'Olá'}})).status,401);
+ assert.equal((await request('/api/messages',{method:'POST',token:'bad',body:{person:'primary',message:'Olá'}})).status,403);
+ assert.equal((await request('/api/messages',{method:'POST',token,body:{person:'primary',message:' '}})).status,400);
+ assert.equal((await request('/api/messages',{method:'POST',token,body:{person:'primary',message:'a'.repeat(1001)}})).status,400);
+ assert.equal((await request('/api/messages',{method:'POST',token,body:{person:'companion',message:'Muitas felicidades!'}})).status,200);
+ let wall=await request('/api/messages');assert.equal(wall.data.messages.length,1);assert.equal(wall.data.messages[0].author,'Esposa');assert.ok(!('guest_id' in wall.data.messages[0]));assert.ok(!('token' in wall.data.messages[0]));
+ await request('/api/messages',{method:'POST',token,body:{person:'primary',message:'<script>alert(1)</script>'}});wall=await request('/api/messages');assert.equal(wall.data.messages.length,1);assert.equal(wall.data.messages[0].author,'Autor da mensagem');assert.equal((await request('/api/messages/mine',{token})).data.message.message,'<script>alert(1)</script>');
+ await request('/api/admin/guests/'+pair.data.id,{method:'PATCH',cookie,body:{active:false}});assert.equal((await request('/api/messages',{method:'POST',token,body:{person:'primary',message:'Novo'}})).status,403);
+});
+
 test('Four-digit PIN login is limited to five attempts per IP window',async()=>{
  for(let i=0;i<3;i++)assert.equal((await request('/api/admin/login',{method:'POST',body:{password:'0000'}})).status,401);
  assert.equal((await request('/api/admin/login',{method:'POST',body:{password:'1234'}})).status,429);
