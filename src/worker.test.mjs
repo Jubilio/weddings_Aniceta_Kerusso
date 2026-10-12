@@ -67,6 +67,21 @@ test('Initial list is grouped, imported once and does not share unnamed places',
  const second=await request('/api/admin/guests',{cookie});assert.equal(second.data.guests.length,first.data.guests.length);assert.equal(second.data.guests.find(g=>g.id===place.id).name,'Nome do músico');
 });
 
+test('On-site attendance is per person, authenticated and independent of RSVP',async()=>{
+ const cookie=adminCookie;const pair=await request('/api/admin/guests',{method:'POST',cookie,body:{name:'Pessoa de teste',companion:'Acompanhante de teste'}});const id=pair.data.id;
+ const enter=(person,present=true,auth=cookie)=>request('/api/admin/guests/'+id+'/checkin',{method:'POST',cookie:auth,body:{person,present}});
+ assert.equal((await enter('primary',true,'')).status,401);
+ assert.equal((await enter('invalid')).status,400);
+ assert.equal((await enter('primary')).status,200);
+ let g=(await request('/api/admin/guests',{cookie})).data.guests.find(g=>g.id===id);assert.ok(g.checked_in_at);assert.equal(g.companion_checked_in_at,null);assert.equal(g.rsvp,'pending');const first=g.checked_in_at;
+ await enter('primary');g=(await request('/api/admin/guests',{cookie})).data.guests.find(g=>g.id===id);assert.equal(g.checked_in_at,first);
+ await enter('companion');g=(await request('/api/admin/guests',{cookie})).data.guests.find(g=>g.id===id);assert.ok(g.companion_checked_in_at);assert.equal(g.companion_rsvp,'pending');
+ await enter('primary',false);g=(await request('/api/admin/guests',{cookie})).data.guests.find(g=>g.id===id);assert.equal(g.checked_in_at,null);assert.ok(g.companion_checked_in_at);
+ await request('/api/admin/guests/'+id,{method:'PATCH',cookie,body:{companion:''}});assert.equal((await enter('companion')).status,400);
+ await request('/api/admin/guests/'+id,{method:'PATCH',cookie,body:{active:false}});assert.equal((await enter('primary')).status,403);
+ const unnamed=(await request('/api/admin/guests',{cookie})).data.guests.find(g=>g.is_placeholder);assert.equal((await request('/api/admin/guests/'+unnamed.id+'/checkin',{method:'POST',cookie,body:{person:'primary',present:true}})).status,403);
+});
+
 test('Four-digit PIN login is limited to five attempts per IP window',async()=>{
  for(let i=0;i<3;i++)assert.equal((await request('/api/admin/login',{method:'POST',body:{password:'0000'}})).status,401);
  assert.equal((await request('/api/admin/login',{method:'POST',body:{password:'1234'}})).status,429);
