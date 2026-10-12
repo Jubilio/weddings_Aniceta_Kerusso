@@ -20,18 +20,18 @@ test('Personal invitations, authentication, RSVP and atomic gift reservations',a
  assert.equal((await request('/api/rsvp',{method:'POST',token:a.data.token,body:{rsvp:'yes'}})).status,200);
  assert.equal((await request('/api/invite',{token:a.data.token})).data.guest.rsvp,'yes');
  assert.equal((await request('/api/rsvp',{method:'POST',token:a.data.token,origin:'https://evil.test',body:{rsvp:'no'}})).status,403);
- const action=(token,what,id='mock-1')=>request('/api/gifts/'+id,{method:'POST',token,body:{action:what}});
+ const action=(token,what,id='gift-geleira')=>request('/api/gifts/'+id,{method:'POST',token,body:{action:what}});
  const race=await Promise.all([action(a.data.token,'reserve'),action(b.data.token,'reserve')]);assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);
  assert.equal((await action(b.data.token,'purchased')).status,409);
- const publicList=await request('/api/gifts');assert.equal(publicList.data.gifts.length,6);assert.ok(publicList.data.gifts.every(g=>!('guest_id'in g)&&!('guest_name'in g)));
+ const publicList=await request('/api/gifts');assert.equal(publicList.data.gifts.length,12);assert.ok(publicList.data.gifts.every(g=>!('guest_id'in g)&&!('guest_name'in g)));
  assert.equal((await action(a.data.token,'purchased')).status,200);assert.equal((await action(a.data.token,'release')).status,409);
- assert.equal((await action(a.data.token,'reserve','mock-2')).status,200);
+ assert.equal((await action(a.data.token,'reserve','gift-guarda-roupa')).status,200);
  assert.equal((await request('/api/admin/guests/'+a.data.id,{method:'PATCH',cookie,body:{active:false}})).status,200);
  assert.equal((await request('/api/invite',{token:a.data.token})).status,403);
- assert.equal((await action(b.data.token,'reserve','mock-2')).status,200);
- assert.equal((await action(b.data.token,'reserve','mock-1')).status,409);
- assert.equal((await request('/api/admin/gifts/mock-1',{method:'PATCH',cookie,body:{reset:true}})).status,200);
- assert.equal((await action(b.data.token,'reserve','mock-1')).status,200);
+ assert.equal((await action(b.data.token,'reserve','gift-guarda-roupa')).status,200);
+ assert.equal((await action(b.data.token,'reserve','gift-geleira')).status,409);
+ assert.equal((await request('/api/admin/gifts/gift-geleira',{method:'PATCH',cookie,body:{reset:true}})).status,200);
+ assert.equal((await action(b.data.token,'reserve','gift-geleira')).status,200);
  assert.equal((await request('/api/admin/guests',{cookie})).data.guests.length,126);const existing=(await request('/api/invite',{token:'existing-link'})).data.guest;assert.equal(existing.name,'Mãe Laurinda');assert.equal(existing.rsvp,'yes');assert.equal(existing.companion,'');
 });
 
