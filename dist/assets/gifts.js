@@ -17,3 +17,5 @@ card.append(actions);container.append(card)}if(!visible.length)container.append(
 async function load(){if(loading||document.querySelector('dialog[open]'))return;loading=true;try{const data=await api('/api/gifts');gifts=data.gifts;status.textContent=token?'Reserve uma opção para evitar presentes repetidos. Depois de comprar, confirme a sua oferta.':'Abra esta lista através do seu convite pessoal para reservar um presente.';render()}catch(e){status.textContent=e.message}finally{loading=false}}
 for(const b of document.querySelectorAll('[data-filter]'))b.onclick=()=>{filter=b.dataset.filter;for(const x of document.querySelectorAll('[data-filter]'))x.setAttribute('aria-pressed',String(x===b));render()};
 load();setInterval(load,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});
+
+for(const b of document.querySelectorAll('[data-copy-payment]'))b.onclick=async()=>{const status=document.querySelector('#payment-copy-status');try{await navigator.clipboard.writeText(b.dataset.copyPayment);status.textContent='Dados copiados com sucesso.'}catch{status.textContent='Seleccione e copie este número: '+b.dataset.copyPayment}};
