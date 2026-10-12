@@ -3,18 +3,26 @@ export const seedVersion='wedding-list-2026-10-12';
 export const guestGroups=[
  ['Família Munguambe',8,['Mãe Laurinda','Helder','Nilza','Cíntia','Wilma','Crish','Joshua','Tia Aida']],
  ['Família Luana',10,['Madrinha Laura','Rabeca','Jovita','Lino','Constância','Letícia','Katija','Francisco','Tio Justino','Tia Ronia']],
- ['Família Cascais',10,[['Inês','Esposo de Inês'],['Cezar','Esposa de Cezar'],['Ana Zaida','Esposo de Ana Zaida'],['A. Francisco','Esposa de A. Francisco'],['Mano Alimo','Esposa de Mano Alimo']]],
+ ['Família Cascais',10,[['Inês','Esposo'],['Cezar','Esposa'],['Ana Zaida','Esposo'],['A. Francisco','Esposa'],['Mano Alimo','Esposa']]],
  ['Amigos',13,['Ivone','Helena','Yoda','Manuel','Laika','Amélia','Carmen','Cade Shkenk','Salvador Rodriguez','Brant Holloway','Ednilson','Sam Shkenk','Elvis']],
  ['Colegas de trabalho',13,['Mana Eunice','Tia Juliana','Tia Amélia','Mana Jorgina','Tio Beto','Tio Marcelo','Mana Cébia','Mana Inocência','Tio Emídio','Mana Hilda','Tio Handelane','Tio Virgílio','Tia Judite']],
  ['Tios educadores',14,['Tia Cidália','Tia Olímpia','Tia Yolande','Tia Nilza','Tia Zélia','Tio Josué','Tio António','Mana Zefa','Mano Augusto','Tio Jamal','Tio Emílio','Tia Filomena','Tio Albino','Tio Armando']],
  ['Grupo de louvor',15,Array.from({length:15},(_,i)=>`Louvor — pessoa ${String(i+1).padStart(2,'0')} (por nomear)`)],
  ['Vizinhos',6,['Sheila','Kelven','Pai','Atílio','Renato','Tia Belinha']],
  ['Colegas da faculdade',12,['Lara Jane','Lara Congole','Rachel','Felismina','Carla Monjane','Orlando Magaia','Mami Maria','Eduardo Manave','Rosimel','João Calage','Chris Manhiça','Olofia']],
- ['Pastores',12,[['Pastor Rafael','Esposa do Pastor Rafael'],['Pastor António','Esposa do Pastor António'],['Pastor Moana','Esposa do Pastor Moana'],['Pastor José','Esposa do Pastor José'],['Pastor Adolfo','Esposa do Pastor Adolfo'],['Pastor Tomás','Esposa do Pastor Tomás']]],
+ ['Pastores',12,[['Pastor Rafael','Esposa'],['Pastor António','Esposa'],['Pastor Moana','Esposa'],['Pastor José','Esposa'],['Pastor Adolfo','Esposa'],['Pastor Tomás','Esposa']]],
  ['Missionários',9,['Mano Augusto','Mana Clara','Mana Sônia','Mano George','Mana Tracey','Mana Charlotte','Papa Steven','Mana Rosa','Julie (mãe do Kerusso)']],
  ['Convidados do Centro',13,['Ernesto Zimba','Benilson','Felex','Slávio','Fátima Lúcia','Eugenésia','Lígia','Anifa','Prisca','Cristina','Lourino/Meck','Dulce','Crimilda']]
 ];
 export async function seedGuests(db){
+ const labelVersion='spouse-labels-2026-10-12';
+ if(!await db.prepare('SELECT id FROM wedding_imports WHERE id=?').bind(labelVersion).first()){
+  await db.batch([
+   db.prepare("UPDATE guests SET companion='Esposo' WHERE import_key LIKE ? AND companion LIKE 'Esposo de %'").bind(seedVersion+':%'),
+   db.prepare("UPDATE guests SET companion='Esposa' WHERE import_key LIKE ? AND (companion LIKE 'Esposa de %' OR companion LIKE 'Esposa do %')").bind(seedVersion+':%'),
+   db.prepare('INSERT OR IGNORE INTO wedding_imports(id) VALUES(?)').bind(labelVersion)
+  ]);
+ }
  if(await db.prepare('SELECT id FROM wedding_imports WHERE id=?').bind(seedVersion).first())return;
  const {results:existing}=await db.prepare('SELECT id,name,companion,group_name,import_key FROM guests').all();
  const ops=[],updates=[],inserts=[];
