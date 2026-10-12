@@ -23,7 +23,7 @@ test('Personal invitations, authentication, RSVP and atomic gift reservations',a
  const action=(token,what,id='gift-geleira')=>request('/api/gifts/'+id,{method:'POST',token,body:{action:what}});
  const race=await Promise.all([action(a.data.token,'reserve'),action(b.data.token,'reserve')]);assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);
  assert.equal((await action(b.data.token,'purchased')).status,409);
- const publicList=await request('/api/gifts');assert.equal(publicList.data.gifts.length,12);assert.ok(publicList.data.gifts.every(g=>!('guest_id'in g)&&!('guest_name'in g)));
+ const publicList=await request('/api/gifts');assert.equal(publicList.data.gifts.length,14);assert.ok(publicList.data.gifts.every(g=>!('guest_id'in g)&&!('guest_name'in g)));
  assert.equal((await action(a.data.token,'purchased')).status,200);assert.equal((await action(a.data.token,'release')).status,409);
  assert.equal((await action(a.data.token,'reserve','gift-guarda-roupa')).status,200);
  assert.equal((await request('/api/admin/guests/'+a.data.id,{method:'PATCH',cookie,body:{active:false}})).status,200);
