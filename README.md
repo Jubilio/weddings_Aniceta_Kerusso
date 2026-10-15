@@ -31,8 +31,8 @@ node --test src/worker.test.mjs
 
 ## Dados do evento
 
-- Cerimónia: Igreja Arco-Íris de Zimpeto, 10h00.
-- Recepção: Cajada 1, 13h00.
+- Cerimónia: Igreja Arco-Íris de Zimpeto, 09h00.
+- Recepção: Cajada 1, 14h00.
 - Data: 20/02/2027.
 - Os links do Google Maps apontam para Iris Ministries – Zimpeto e Cajada Eventos, conforme as localizações fornecidas pelo casal.
 - Ajuste a lista de presentes de exemplo no admin antes de partilhar convites.
