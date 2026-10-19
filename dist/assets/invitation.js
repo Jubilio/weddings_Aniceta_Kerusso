@@ -2,6 +2,7 @@ import {api,token,personal,message,el} from './common.js';
 import {initEnvelope} from './envelope.js';
 const status=document.querySelector('#rsvp-status'),name=document.querySelector('#guest-name'),actions=document.querySelector('#rsvp-actions');
 document.querySelector('#gifts-link').href=personal('/presentes/');
+document.querySelector('#money-shortcut').href=personal('/presentes/');
 document.querySelector('#messages-link').href=personal('/mensagens/')+'#escrever';document.querySelector('#messages-wall-link').href=personal('/mensagens/');
 const whatsapp=document.querySelector('#whatsapp-link');
 function wa(guest){const people=guest?[guest.name,...(guest.companion?[guest.companion]:[])]:[];whatsapp.href='https://wa.me/258848675125?text='+encodeURIComponent(`Olá Aniceta! ${people.length>1?'O nosso convite é para '+people.join(' e '):'Sou '+(people[0]||'um convidado')}. Gostaria de falar sobre a confirmação de presença no vosso casamento de 20/02/2027.`)}wa();
@@ -10,3 +11,5 @@ const audio=document.querySelector('#wedding-music'),toggle=document.querySelect
 async function play(){try{await audio.play()}catch{toggle.textContent='♫ Ouvir música'}}
 audio.addEventListener('play',()=>toggle.textContent='Ⅱ Pausar música');audio.addEventListener('pause',()=>toggle.textContent='♫ Ouvir música');audio.addEventListener('error',()=>{toggle.textContent='Música indisponível';toggle.disabled=true});toggle.onclick=()=>audio.paused?play():audio.pause();
 initEnvelope(play);
+
+function updateCountdown(){const box=document.querySelector('#wedding-countdown');if(!box)return;const difference=new Date('2027-02-20T09:00:00+02:00').getTime()-Date.now();if(difference<=0){box.replaceChildren(el('span','Chegou o nosso grande dia!'));return}const minutes=Math.floor(difference/60000),values=[[Math.floor(minutes/1440),'dias'],[Math.floor(minutes/60)%24,'horas'],[minutes%60,'minutos']];box.replaceChildren(...values.map(([value,label])=>{const item=el('span');item.append(el('strong',String(value).padStart(2,'0')),el('small',label));return item}))}updateCountdown();setInterval(updateCountdown,60000);
