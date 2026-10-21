@@ -1,6 +1,6 @@
 # Aniceta & Kerusso — Convite de casamento
 
-Casamento de Aniceta Martins e Kerusso Truth Perhay, em **20 de Fevereiro de 2027**.
+Casamento de Aniceta Martins e Kerusso Truth Perhay, em **27 de Fevereiro de 2027**.
 
 Convite com moldura floral, paleta de chocolate e marfim, ícones, música, convidados personalizados, confirmação de presença e gestão de presentes.
 
@@ -33,7 +33,7 @@ node --test src/worker.test.mjs
 
 - Cerimónia: Igreja Arco-Íris de Zimpeto, 09h00.
 - Recepção: Cajada 1, 14h00.
-- Data: 20/02/2027.
+- Data: 27/02/2027.
 - Os links do Google Maps apontam para Iris Ministries – Zimpeto e Cajada Eventos, conforme as localizações fornecidas pelo casal.
 - Ajuste a lista de presentes de exemplo no admin antes de partilhar convites.
 - Os links pessoais dão acesso à resposta e reservas do convidado; partilhe-os apenas com o destinatário.

@@ -20,7 +20,7 @@ export default {async fetch(req,env){const url=new URL(req.url),path=url.pathnam
   if((path==='/'||path==='/index.html')&&response.headers.get('Content-Type')?.includes('text/html')){
    const origin=url.origin;
    return new HTMLRewriter()
-    .on('meta[property="og:image"],meta[property="og:image:secure_url"],meta[name="twitter:image"]',{element(e){e.setAttribute('content',origin+'/assets/og-wedding.jpg')}})
+    .on('meta[property="og:image"],meta[property="og:image:secure_url"],meta[name="twitter:image"]',{element(e){e.setAttribute('content',origin+'/assets/og-wedding-20270227.jpg')}})
     .on('meta[property="og:url"]',{element(e){e.setAttribute('content',origin+'/')}})
     .transform(response);
   }
